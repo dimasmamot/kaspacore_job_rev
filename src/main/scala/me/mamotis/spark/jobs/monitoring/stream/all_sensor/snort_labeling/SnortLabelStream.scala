@@ -11,7 +11,7 @@ import org.bson._
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-object SnortLabelStream extends StreamUtils {
+object SnortLabelStream extends LabelStreamUtils {
   case class SignatureCountObj(signature: String, count: Long)
   case class ProtocolCountObj(protocol: String, count: Long)
   case class AlertMsgCountObj(alertMsg: String, count: Long)
