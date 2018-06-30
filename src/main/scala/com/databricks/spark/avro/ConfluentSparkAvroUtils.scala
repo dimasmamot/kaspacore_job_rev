@@ -53,7 +53,7 @@ class ConfluentSparkAvroUtils(schemaRegistryURLs: String) extends Serializable {
             // Decrypt Key
             val encryptedKey: Array[Byte] = payload.slice(HEADER_SIZE,
               HEADER_SIZE + AES_ENCRYPTED_KEY_SIZE)
-            val decryptKey = (encryptedKey: Array[Byte]) => {
+              val decryptKey = (encryptedKey: Array[Byte]) => {
               val encryptedKeyBuff: ByteBuffer = ByteBuffer.wrap(encryptedKey)
               val decryptRequest = new DecryptRequest().withCiphertextBlob(encryptedKeyBuff)
               val plainKey = awsKms.decrypt(decryptRequest).getPlaintext()

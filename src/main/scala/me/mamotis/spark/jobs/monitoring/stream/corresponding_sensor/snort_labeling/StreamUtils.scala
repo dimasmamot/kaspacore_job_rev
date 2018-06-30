@@ -11,10 +11,10 @@ private[spark] trait StreamUtils {
   }
 
   def getSparkSession(args: Array[String]): SparkSession = {
-    val uri: String = args.headOption.getOrElse("mongodb://localhost/spark.labelsnort")
+    val uri: String = args.headOption.getOrElse("mongodb://10.252.108.99/spark.labelsnort")
 
     val conf = new SparkConf()
-      .setMaster("local[*]")
+      .setMaster("spark://master.pens.ac.id:7077")
       .setAppName("StreamProtocolCountToMongo")
       .set("spark.app.id", "StreamProtocolCountToMongo")
       .set("spark.mongodb.input.uri", uri)

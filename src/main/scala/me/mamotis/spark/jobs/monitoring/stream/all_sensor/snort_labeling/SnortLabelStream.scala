@@ -4,9 +4,11 @@ import com.databricks.spark.avro.ConfluentSparkAvroUtils
 import com.mongodb.client.MongoCollection
 import com.mongodb.spark.MongoConnector
 import com.mongodb.spark.config.WriteConfig
+import com.mongodb.spark.sql.fieldTypes.Timestamp
 import org.apache.spark.sql._
-import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.functions.{col, from_unixtime, to_utc_timestamp}
 import org.bson._
+import org.apache.spark.sql.types.StringType
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -15,7 +17,7 @@ object SnortLabelStream extends LabelStreamUtils {
   case class SignatureCountObj(signature: String, count: Long)
   case class ProtocolCountObj(protocol: String, count: Long)
   case class AlertMsgCountObj(alertMsg: String, count: Long)
-  case class LabelMsgObj(timestamp: Double,
+  case class LabelMsgObj(timestamp: String,
                          dest_ip: String,
                          dst_port: Long,
                          src_port: Long,
@@ -35,7 +37,7 @@ object SnortLabelStream extends LabelStreamUtils {
       .format("kafka")
       .option("kafka.bootstrap.servers", kafkaUrl)
       .option("subscribe", topic)
-      .option("startingOffsets", "earliest")
+      .option("startingOffsets", "latest")
       .load()
 
     val utils = new ConfluentSparkAvroUtils(schemaRegistryURL)
@@ -46,12 +48,17 @@ object SnortLabelStream extends LabelStreamUtils {
       valDes(col("value")).alias("value")
     )
 
+//    val protocolDf = parsedRawDf.select(to_utc_timestamp
+    // (from_unixtime($"timestamp"),"GMT+7").alias("timestamp"),
+    // $"protocol").withColumn("value", lit(1))
+
     val parsedRawDf = decoded.select("value.*")
 
     val labelDf = parsedRawDf.select(
-        $"timestamp", $"dest_ip", $"dst_port", $"src_port", $"src_ip",$"alert_msg")
+        to_utc_timestamp(from_unixtime($"timestamp"),"GMT").alias("timestamp")
+          .cast(StringType), $"dest_ip", $"dst_port", $"src_port", $"src_ip",$"alert_msg")
       .map((r:Row) => LabelMsgObj(
-        r.getAs[String](0).toDouble,
+        r.getAs[String](0),
         r.getAs[String](1),
         r.getAs[Long](2),
         r.getAs[Long](3),
@@ -64,7 +71,7 @@ object SnortLabelStream extends LabelStreamUtils {
       .outputMode("append")
       .foreach(new ForeachWriter[LabelMsgObj]{
 
-        val writeConfig: WriteConfig = WriteConfig(Map("uri" -> "mongodb://localhost/spark.labelsnort"))
+        val writeConfig: WriteConfig = WriteConfig(Map("uri" -> "mongodb://localhost/spark.senot"))
         var mongoConnector: MongoConnector = _
         var LabelMsg: mutable.ArrayBuffer[LabelMsgObj] = _
 
@@ -80,7 +87,10 @@ object SnortLabelStream extends LabelStreamUtils {
 
         override def close(errorOrNull: Throwable): Unit = {
           if (LabelMsg.nonEmpty){
-            mongoConnector.withCollectionDo(writeConfig, { collection: MongoCollection[Document] =>
+//              LabelMsg.map(lm => {
+//                println(lm.timestamp)
+//              })
+             mongoConnector.withCollectionDo(writeConfig, { collection: MongoCollection[Document] =>
               collection.insertMany(LabelMsg.map(lm => {
                 var doc = new Document()
                 doc.put("ts_snort", lm.timestamp)
@@ -204,7 +214,7 @@ object SnortLabelStream extends LabelStreamUtils {
 //    signatureCountQuery.awaitTermination()
 //    msgCountQuery.awaitTermination()
 //    parsedRawToHDFSQuery.awaitTermination()
-//    protocolCountQuery.awaitTermination()
+//    protocolCountQuery.awaitTermination(
     labelQuery.awaitTermination()
   }
 }

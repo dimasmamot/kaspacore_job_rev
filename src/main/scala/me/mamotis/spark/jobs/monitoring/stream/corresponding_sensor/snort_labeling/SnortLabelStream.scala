@@ -23,8 +23,8 @@ object SnortLabelStream extends StreamUtils {
                          alert_msg: String)
 
   def main(args: Array[String]): Unit = {
-    val kafkaUrl = "localhost:9092"
-    val schemaRegistryURL = "http://192.168.30.19:8081"
+    val kafkaUrl = "10.252.108.100:9092"
+    val schemaRegistryURL = "http://10.252.108.100:8081"
     val topic = "snoqttv4"
 
     val spark = getSparkSession(args)
@@ -64,7 +64,7 @@ object SnortLabelStream extends StreamUtils {
       .outputMode("append")
       .foreach(new ForeachWriter[LabelMsgObj]{
 
-        val writeConfig: WriteConfig = WriteConfig(Map("uri" -> "mongodb://localhost/spark.labelsnort"))
+        val writeConfig: WriteConfig = WriteConfig(Map("uri" -> "mongodb://10.252.108.99/spark.labelsnort"))
         var mongoConnector: MongoConnector = _
         var LabelMsg: mutable.ArrayBuffer[LabelMsgObj] = _
 
